@@ -45,15 +45,24 @@
 /*******************************************************************************
 * Macros
 *******************************************************************************/
+
 /* DMA Channel 0 */
 #define GPDMA_CHANNEL_NUM 0
 
+#ifdef CYBSP_USER_LED2_PIN
 /* Data Length of the GPIO buffer */
 #define DATA_SIZE 8UL
+
+#else
+/* Data Length of the GPIO buffer */
+#define DATA_SIZE 2UL
+#endif
 
 /*******************************************************************************
 * Variables
 *******************************************************************************/
+
+#ifdef CYBSP_USER_LED2_PIN
 /* GPIO logic levels to be sent to the OMR register. This data format ensures 
  * 50% duty cycle for CYBSP_USER_LED and 25% duty cycle for CYBSP_USER_LED2
  */
@@ -67,6 +76,16 @@ uint32_t gpio_data[DATA_SIZE] = {
     (XMC_GPIO_OUTPUT_LEVEL_LOW  << CYBSP_USER_LED_PIN),     /* Logic LOW to USER_LED */
     (XMC_GPIO_OUTPUT_LEVEL_LOW  << CYBSP_USER_LED2_PIN),    /* Logic LOW to USER_LED2 */
 };
+
+#else
+/* GPIO logic levels to be sent to the OMR register. This data format ensures
+ * 50% duty cycle for CYBSP_USER_LED.
+ */
+uint32_t gpio_data[DATA_SIZE] = {
+    (XMC_GPIO_OUTPUT_LEVEL_HIGH << CYBSP_USER_LED_PIN),   /* Logic HIGH to USER_LED */
+    (XMC_GPIO_OUTPUT_LEVEL_LOW << CYBSP_USER_LED_PIN),    /* Logic HIGH to USER_LED2 */
+};
+#endif
 
 /* DMA channel configuration. Since USER_LED and USER_LED2 are in the same 
  * port, destination address is same for both the LEDs.
@@ -98,9 +117,9 @@ const XMC_DMA_CH_CONFIG_t dma_ch_config =
 * Function Name: main
 ********************************************************************************
 * Summary:
-*  This is the main function. This function performs the initial setup of the 
-*  device and initializes the GPDMA peripheral. The GPIO logic levels are 
-*  transferred from the SRAM to the GPIO OMR register.
+* This is the main function. This function performs the initial setup of the 
+* device and initializes the GPDMA peripheral. The GPIO logic levels are 
+* transferred from the SRAM to the GPIO OMR register.
 *
 * Parameters:
 *  none
