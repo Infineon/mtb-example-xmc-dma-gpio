@@ -1,7 +1,7 @@
 /******************************************************************************
 * File Name:   main.c
 *
-* Description: This is the source code for the XMC MCU: GPIO Example for 
+* Description: This is the source code for the XMC MCU: GPIO Example for
 *              ModusToolbox. This example demonstrates how to configure the GPIO
 *              registers using the GPDMA peripheral.
 *
@@ -9,7 +9,7 @@
 *
 *******************************************************************************
 *
-* Copyright (c) 2021, Infineon Technologies AG
+* Copyright (c) 2022, Infineon Technologies AG
 * All rights reserved.
 *
 * Boost Software License - Version 1.0 - August 17th, 2003
@@ -40,14 +40,12 @@
 
 #include "cybsp.h"
 #include "cy_utils.h"
-#include "xmc_dma.h"
+#include "cy_retarget_io.h"
+#include <stdio.h>
 
 /*******************************************************************************
 * Macros
 *******************************************************************************/
-
-/* DMA Channel 0 */
-#define GPDMA_CHANNEL_NUM 0
 
 #ifdef CYBSP_USER_LED2_PIN
 /* Data Length of the GPIO buffer */
@@ -58,12 +56,15 @@
 #define DATA_SIZE 2UL
 #endif
 
+/* Define macro to enable/disable printing of debug messages */
+#define ENABLE_XMC_DEBUG_PRINT          (0)
+
 /*******************************************************************************
 * Variables
 *******************************************************************************/
 
 #ifdef CYBSP_USER_LED2_PIN
-/* GPIO logic levels to be sent to the OMR register. This data format ensures 
+/* GPIO logic levels to be sent to the OMR register. This data format ensures
  * 50% duty cycle for CYBSP_USER_LED and 25% duty cycle for CYBSP_USER_LED2
  */
 uint32_t gpio_data[DATA_SIZE] = {
@@ -87,38 +88,16 @@ uint32_t gpio_data[DATA_SIZE] = {
 };
 #endif
 
-/* DMA channel configuration. Since USER_LED and USER_LED2 are in the same 
- * port, destination address is same for both the LEDs.
- */
-const XMC_DMA_CH_CONFIG_t dma_ch_config =
-{
-    {
-        .enable_interrupt = false,                                         /* Interrupts enabled ? */
-        .dst_transfer_width = XMC_DMA_CH_TRANSFER_WIDTH_32,                /* Destination transfer width */
-        .src_transfer_width = XMC_DMA_CH_TRANSFER_WIDTH_32,                /* Source transfer width */
-        .dst_address_count_mode = XMC_DMA_CH_ADDRESS_COUNT_MODE_NO_CHANGE, /* Destination address count mode */
-        .src_address_count_mode = XMC_DMA_CH_ADDRESS_COUNT_MODE_INCREMENT, /* Source address count mode */
-        .dst_burst_length = XMC_DMA_CH_BURST_LENGTH_1,                     /* Destination burst length */
-        .src_burst_length = XMC_DMA_CH_BURST_LENGTH_1,                     /* Source burst length */
-        .enable_src_gather = false,                                        /* Source gather enabled? */
-        .enable_dst_scatter = false,                                       /* Destination scatter enabled? */
-        .transfer_flow = XMC_DMA_CH_TRANSFER_FLOW_M2M_DMA,                 /* Transfer flow */
-    },
-    .src_addr = (uint32_t)&gpio_data[0],                                               /* Source address */
-    .dst_addr = (uint32_t) & (CYBSP_USER_LED_PORT->OMR),                               /* Destination address */
-    .block_size = DATA_SIZE,                                                           /* Block size */
-    .transfer_type = XMC_DMA_CH_TRANSFER_TYPE_MULTI_BLOCK_SRCADR_RELOAD_DSTADR_RELOAD, /* Transfer type */
-    .priority = XMC_DMA_CH_PRIORITY_0,                                                 /* Priority level */
-    .src_handshaking = XMC_DMA_CH_SRC_HANDSHAKING_SOFTWARE,                            /* Source handshaking */
-    .dst_handshaking = XMC_DMA_CH_DST_HANDSHAKING_SOFTWARE                             /* Destination handshaking */
-};
+/* Source and destination address pointers */
+uint32_t * src_addr_ptr = (uint32_t *) & gpio_data[0];
+uint32_t * dst_addr_ptr = (uint32_t *) & (CYBSP_USER_LED_PORT->OMR);
 
 /*******************************************************************************
 * Function Name: main
 ********************************************************************************
 * Summary:
-* This is the main function. This function performs the initial setup of the 
-* device and initializes the GPDMA peripheral. The GPIO logic levels are 
+* This is the main function. This function performs the initial setup of the
+* device and initializes the GPDMA peripheral. The GPIO logic levels are
 * transferred from the SRAM to the GPIO OMR register.
 *
 * Parameters:
@@ -139,14 +118,19 @@ int main(void)
         CY_ASSERT(0);
     }
 
-    /* Initialize and enable the GPDMA peripheral */
-    XMC_DMA_Init(XMC_DMA0);
+    /* Initialize printf retarget */
+    cy_retarget_io_init(CYBSP_DEBUG_UART_HW);
 
-    /* Initialize the DMA channel 0 with provided channel configuration */
-    XMC_DMA_CH_Init(XMC_DMA0, GPDMA_CHANNEL_NUM, &dma_ch_config);
+    #if ENABLE_XMC_DEBUG_PRINT
+        printf("Initialization done\r\n");
+    #endif
 
     /* Enable the DMA channel to initiate transfer */
-    XMC_DMA_CH_Enable(XMC_DMA0, GPDMA_CHANNEL_NUM);
+    XMC_DMA_CH_Enable(DMA_HW, DMA_NUM);
+
+    #if ENABLE_XMC_DEBUG_PRINT
+        printf("The DMA channel enabled and transfer initiated\r\n");
+    #endif
 
     while (1);
 }
